@@ -1,0 +1,34 @@
+
+import prompt "ideas.njk" as Ideas with input { company: string } returns { ideas: list<string> }
+import prompt "writer.njk" as Writer with input { idea: string } returns { content: string }
+import prompt "marketer.njk" as Marketer 
+  with input { company: string, content: string, contentType: string } 
+  returns { humor: number, relevance: number, surprise: number, engaging: number }
+
+flow Analyze(company: string, content: string, contentType: string) {
+  { humor, relevance, surprise, engaging } = Marketer({ company, content, contentType })
+  if humor > 2 and relevance > 2 and surprise > 5 and engaging > 7 {
+    return true
+  }
+  return false
+}
+
+flow Main() {
+  company = "AI-powered shopping app"
+  { ideas } = Ideas({ company })
+  print("Ideas: ", ideas)
+  contentTypes = ["Twitter Post", "15-second Instagram Reel Script"]
+  output = []
+  for idea in ideas {
+    for contentType in contentTypes {
+      { content } = Writer({ idea: idea, contentType: contentType })
+      output.push({ idea: idea, contentType: contentType, content: content })
+    }
+  }
+  for o in output {
+    if Analyze({company: company, content: o.content, contentType: o.contentType}) {
+      print("Good content: ", o)
+    }
+  }
+  return output
+}
