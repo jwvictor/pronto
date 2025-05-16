@@ -1,109 +1,54 @@
 # Pronto
 
-A specialized language for building AI agent workflows with a clean, Python-inspired syntax. Pronto makes prompt-based development feel natural by treating prompts as first-class functions and providing seamless JavaScript interop.
+A specialized language and runtime for building AI agent workflows with a clean syntax. Pronto makes prompt-based development feel natural by treating prompts as first-class, strongly typed functions and providing seamless JavaScript interop. And, it transpiles down to Javascript so it can be swiftly integrated into any Javascript-based projects. 
+
+Overall, Pronto offers several benefits:
+
+1. Clean separation of concerns between the logic of your prompts and flows and the underlying mechanics of the AI interactions.
+2. Reduced boilerplate for prompt generation, parsing, and API calls.
+3. The runtime can be instrumented to provide valuable debugging, metrics, observability, etc. to the user.
+
+With Pronto, a relatively complicated workflow can be put together in 20 lines. And you get to focus on the logic, not the implementation details.
 
 ## Key Features
 
-### 1. First-Class Prompt Support
+### 1. Prompts as Functions
 Import and use prompts as regular functions with type safety:
 
 ```
-// Before (traditional JavaScript)
-const result = await callPrompt("rank_ideas.njk", {
-  ideas: ideaList,
-  temperature: 0.7,
-  max_tokens: 1000
-});
-const bestIdea = JSON.parse(result).best;
-
 // After (with Pronto)
 import prompt "rank_ideas.njk" as RankIdeas
-  with input { ideas: list<Idea> }
-  returns { best: Idea }
+  with input { ideas: list<string> }
+  returns { scores: list<number> }
 
-flow Main() {
-  result = RankIdeas({ ideas: ideaList })
-  return result.best  // Type-safe access
+flow RankIdeas(ideaList: list<string>) {
+  { scores } = RankIdeas({ ideas: ideaList })
 }
 ```
 
-### 2. Clean Control Flow
-Write complex agent logic without callback hell or promise chains:
+### 2. Automatic AI Interactions and Parsing
+
+All the logic for interacting with your AI of choice is encapsulated in the runtime. The API calls, the JSON extraction and parsing, and logging are all handled in the runtime layer. This means you can easily swap out models, change parameters, wire in observability, and so on, without trouble.
+
+### 3. A type system designed for AI interactions
+
+Pronto features a powerful type system, with types checked at runtime (since we cannot know at compile time what will be returned by the LLMs).
+
+### 4. Clean syntax
+
+The syntax was designed to make agentic flows simple to write. Familiar Javascript object shorthand is supported, and return types can be deconstructed to further minimize boilerplate, e.g. to invoke a prompt called `AnalyzeEvent`:
 
 ```
-// Before (traditional JavaScript)
-async function processDocument() {
-  const summary = await summarizePrompt(doc);
-  const analysis = await analyzePrompt(summary);
-  for (const point of analysis.points) {
-    const detail = await detailPrompt(point);
-    if (detail.score > 0.8) {
-      await savePrompt(detail);
-    }
-  }
-}
-
-// After (with Pronto)
-flow ProcessDocument(doc: Document) {
-  summary = Summarize({ text: doc })
-  analysis = Analyze({ summary })
-  for point in analysis.points {
-    detail = GetDetail({ point })
-    if detail.score > 0.8 {
-      Save({ detail })
-    }
-  }
-}
-```
-
-### 3. Type-Safe Prompt Interactions
-Catch prompt input/output mismatches at compile time:
-
-```
-import prompt "classify.njk" as Classify
-  with input { text: string, categories: list<string> }
-  returns { category: string, confidence: number }
-
-flow ProcessText(text: string) {
-  // This will fail at compile time if the input/output types don't match
-  result = Classify({
-    text: text,
-    categories: ["A", "B", "C"]
-  })
-  
-  if result.confidence > 0.9 {  // Type-safe access to result fields
-    return result.category
-  }
-}
-```
-
-### 4. Python-Like Syntax with JavaScript Ecosystem
-Write in a clean, familiar syntax while keeping access to the JavaScript ecosystem:
-
-```
-// Import from npm packages or local modules
-import { processImage, uploadToS3 } from "./utils.js"
-
-flow AnalyzeImage(url: string) {
-  // Use JavaScript functions seamlessly
-  image = processImage(url)
-  
-  // Mix with prompt calls naturally
-  analysis = ImageAnalysis({ image })
-  
-  if analysis.isValid and not analysis.hasErrors {
-    uploadToS3(analysis.result)
-    return true
-  }
-  return false
-}
+{ name, date, time } = AnalyzeEvent({ description });
 ```
 
 ## Motivation
 
-Building AI agent workflows often involves complex prompt chaining, state management, and control flow. While this can be done in general-purpose programming languages, Pronto provides first-class support for prompts and flows, making it easier to:
+Building AI agent workflows often involves complex prompt chaining, state management, and control flow. While this can be done in general-purpose programming languages, there tends to be a lot of boilerplate and data wrangling, even with packages like LangChain, muddying the clean separation of concerns for which I so deeply yearn.
 
-- Write clear and maintainable agent logic
+Pronto seeks to decouple the agentic flow logic from the implementation details so agent development can be simple, fast, and well-encapsulated. To that end, Pronto provides first-class support for prompts and the flows that connect them, making it easier to:
+
+- Write clear and maintainable agent logic cleanly decoupled from the underlying details of AI interactions
 - Handle prompt inputs and outputs with type safety
 - Compose complex workflows from simpler building blocks
 - Focus on the business logic rather than boilerplate code
@@ -114,7 +59,7 @@ Building AI agent workflows often involves complex prompt chaining, state manage
 
 ```bash
 # Clone the repository
-git clone https://github.com/yourusername/pronto.git
+git clone https://github.com/jwvictor/pronto.git
 cd pronto
 
 # Install dependencies
@@ -126,26 +71,14 @@ npm run build
 
 ### Quick Start
 
-Create a new file `example.pronto`:
-
-```
-import prompt "rank_ideas.njk" as RankIdeas
-  with input { ideas: list<Idea> }
-  returns { best: Idea }
-
-flow Main() {
-  ideas = GetIdeas()
-  result = RankIdeas({ ideas })
-  return result.best
-}
-```
-
-Compile and run:
+Create a new file `example.pronto` along with any prompts it uses. Then compile and run:
 
 ```bash
-npm run compile example.pronto
+node dist/index.js compile -i example.pronto -o example.js
 node example.js
 ```
+
+See the examples directory to learn more.
 
 ## Basic Programming Model
 
@@ -154,9 +87,8 @@ Pronto is built around two core concepts:
 ### 1. Prompts
 
 Prompts are the basic building blocks. They represent template-based interactions with AI models. Each prompt:
-- Has a defined input type
-- Has a defined output type
-- Is imported from a template file
+- Is defined in a Nunjucks template file
+- Has defined input/output types
 - Can be called like a regular function
 
 ### 2. Flows
@@ -211,13 +143,6 @@ if condition {
 for item in items {
   // code
 }
-
-// Infinite loop
-loop {
-  if shouldBreak {
-    return
-  }
-}
 ```
 
 ### Operators
@@ -244,13 +169,16 @@ x = getValue()
 ### Function Calls
 
 ```
-// Regular call with positional args
-result = myFlow(arg1, arg2)
-
-// Named parameter call (required for prompts)
+// Named parameter call (required for prompts and flows)
 result = MyPrompt({ input: value })
 
-// Method calls
+// Or, in shorthand
+result = MyPrompt({ value })
+
+// Regular Javascript function call with positional args
+result = myFlow(arg1, arg2)
+
+// Method calls on Javascript objects
 result = object.method()
 ```
 
@@ -296,8 +224,7 @@ src/
   │   ├── parser.ts  # Parsing
   │   ├── ast.ts     # AST definitions
   │   └── codegen.ts # Code generation
-  ├── runtime/       # Runtime support
-  └── cli/           # Command-line interface
+  └── runtime/       # Runtime support
 ```
 
 ### Guidelines
@@ -310,8 +237,7 @@ src/
 
 ### Areas for Improvement
 
-- Add more type system features
 - Improve error messages and debugging
 - Add static analysis and optimizations
 - Expand standard library
-- Add IDE/editor support 
+- Add IDE/editor support (especially syntax highlighting) 
