@@ -1,0 +1,26 @@
+{
+  "name": "agent-compiler",
+  "version": "1.0.0",
+  "type": "module",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "tsc && mkdir -p dist/runtime && cp -r src/runtime/* dist/runtime/"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "devDependencies": {
+    "@types/node": "^22.15.18",
+    "@types/nunjucks": "^3.2.6",
+    "typescript": "^5.8.3"
+  },
+  "dependencies": {
+    "chalk": "^5.4.1",
+    "chevrotain": "^11.0.3",
+    "nunjucks": "^3.2.4",
+    "openai": "^4.98.0",
+    "zod": "^3.24.4"
+  }
+}
