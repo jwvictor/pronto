@@ -75,7 +75,7 @@ Create a new file `example.pronto` along with any prompts it uses. Then compile 
 
 ```bash
 node dist/index.js compile -i example.pronto -o example.js
-node example.js
+OPENAI_API_KEY=xyz node example.js
 ```
 
 See the examples directory to learn more.
